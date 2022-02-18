@@ -1,20 +1,15 @@
 <template>
   <article class="s-o-map">
-    <div
-      ref="map-container"
-      class="map-container"
-    />
+    <div ref="map-container" class="map-container" />
 
-    <slot
-      v-if="ready"
-    />
+    <slot v-if="ready" />
 
     <div class="s-o-map__info">
       <div
         v-if="showCoordinates"
         class="s-o-map__lat-lng white--text px-2 py-1"
       >
-        {{ mouseCoords.lat | latitude }} - {{ mouseCoords.lon | longitude }}
+        {{ mouseCoords.lat }} - {{ mouseCoords.lon }}
       </div>
     </div>
 
@@ -35,14 +30,14 @@
       :reset-zoom="resetZoom"
       :zoom-disabled="zoomDisabled"
     >
-      <zoom-controls
+      <!-- <zoom-controls
         :zoom-in="zoomIn"
         :zoom-out="zoomOut"
         :reset-zoom="resetZoom"
         :zoom-in-disabled="zoomDisabled"
         :zoom-out-disabled="zoomDisabled"
         :show-reset-zoom="currentZoomLevel !== initialZoom"
-      />
+      /> -->
     </slot>
 
     <s-circular-loader
@@ -60,23 +55,23 @@
 </template>
 
 <script lang="ts">
-import Vue, { PropOptions } from 'vue';
-import throttle from 'lodash/throttle';
-import 'ol/ol.css';
-import { Map, View } from 'ol';
-import TileLayer from 'ol/layer/Tile';
-import XYZ from 'ol/source/XYZ';
-import { toLonLat, fromLonLat } from 'ol/proj';
-import { getBottomRight } from 'ol/extent';
-import { defaults as defaultInteractions } from 'ol/interaction';
-/* eslint-disable import/no-unresolved */
-import { Map as MapInterface, Extent } from 'openlayers';
-/* eslint-enable import/no-unresolved */
-import { latitude, longitude } from '@stratumfive/ui-baseplate/src/filters/latLong';
-import SCircularLoader from '@stratumfive/ui-baseplate/src/components/SCircularLoader/SCircularLoader.vue';
-import MapStyles, { CMapOption } from './MapStyles';
-import ZoomControls from './ZoomControls.vue';
-import { LatLon, MapStyle } from './SMap.interface';
+import throttle from "lodash/throttle";
+import "ol/ol.css";
+import { Map, View } from "ol";
+import TileLayer from "ol/layer/Tile";
+import XYZ from "ol/source/XYZ";
+import { toLonLat, fromLonLat } from "ol/proj";
+import { getBottomRight } from "ol/extent";
+import { defaults as defaultInteractions } from "ol/interaction";
+
+// TODO make our own utils
+// import {
+//   latitude,
+//   longitude,
+// } from "@stratumfive/ui-baseplate/src/filters/latLong";
+import MapStyles, { CMapOption } from "./MapStyles";
+// import ZoomControls from "./ZoomControls.vue";
+import { LatLon } from "./SMap.interface";
 
 interface Vector2D {
   x: number;
@@ -89,31 +84,25 @@ interface Dimensions {
 }
 
 interface MapProvider {
-  map: MapInterface;
+  map: any;
   dimensions: () => Dimensions | null;
-  extent: () => Extent;
+  extent: () => any;
   cartoServerUrl: () => string;
   currentZoomLevel: () => number;
 }
 
-export default Vue.extend({
-  name: 'SMap',
+export default {
+  name: "SMap",
 
   components: {
-    ZoomControls,
-    SCircularLoader,
-  },
-
-  filters: {
-    latitude,
-    longitude,
+    // ZoomControls,
   },
 
   props: {
     cartoServerUrl: {
       required: false,
       type: String,
-      default: 'https://cs.stratumfive.com',
+      default: "https://cs.stratumfive.com",
     },
 
     /**
@@ -124,7 +113,7 @@ export default Vue.extend({
       type: Array,
       required: false,
       default: (): any[] => [],
-    } as PropOptions<CMapOption[]>,
+    },
 
     /**
      * Higher numbers are more zoomed in
@@ -151,7 +140,7 @@ export default Vue.extend({
         x: 0,
         y: 0,
       }),
-    } as PropOptions<Vector2D>,
+    },
 
     location: {
       type: Object,
@@ -160,13 +149,12 @@ export default Vue.extend({
         lat: 0,
         lon: 0,
       }),
-    } as PropOptions<LatLon>,
-
+    },
     mapStyle: {
       required: false,
       type: String,
-      default: 'openStreetMap',
-    } as PropOptions<MapStyle>,
+      default: "openStreetMap",
+    },
 
     scrollToZoom: {
       type: Boolean,
@@ -222,19 +210,26 @@ export default Vue.extend({
 
   computed: {
     ready(): boolean {
-      return (this.extent && this.dimensions);
+      return this.extent && this.dimensions;
     },
 
     /**
      * returns the map tile URL based on the mapStyle prop
      */
     mapUrl(): string {
-      const { url } = MapStyles({ cartoServerURL: this.cartoServerUrl })[this.mapStyle];
+      const { url } = MapStyles({ cartoServerURL: this.cartoServerUrl })[
+        this.mapStyle
+      ];
 
       // Add the CMap options
-      if (this.cMapOptions.length && (this.mapStyle === 'cmap' || this.mapStyle === 'cmapTerrain')) {
-        const options = this.cMapOptions.map((option: CMapOption) => `${option.cmapId}:${option.value}`);
-        return `${url}&cmapparams=${options.join(';')}`;
+      if (
+        this.cMapOptions.length &&
+        (this.mapStyle === "cmap" || this.mapStyle === "cmapTerrain")
+      ) {
+        const options = this.cMapOptions.map(
+          (option: CMapOption) => `${option.cmapId}:${option.value}`
+        );
+        return `${url}&cmapparams=${options.join(";")}`;
       }
 
       return url;
@@ -270,36 +265,34 @@ export default Vue.extend({
     },
   },
 
-  async created() {
+  async created(): Promise<void> {
     this.updateMouseCoords = throttle(this.updateMouseCoords, 200);
 
     // Listen for children emitting 'changeCursor'
-    this.$on('changeCursor', this.changeCursor);
+    // this.$on("changeCursor", this.changeCursor);
 
     this.initialiseCache();
   },
 
-  mounted() {
+  mounted(): void {
     this.source = new XYZ({
       // Hardcoded use of cartoserver for terrain,
       // because cors issues with existing cmap provider with this approach.
-      url: 'https://cs.stratumfive.com/tile/256/{z}/{y}/{x}/png?layers=cmap',
+      url: "https://cs.stratumfive.com/tile/256/{z}/{y}/{x}/png?layers=cmap",
       tileLoadFunction: this.onTileLoad,
     });
 
     this.tileLayer = new TileLayer({
       source: this.source,
       // TODO potentially delete - was attempt to fix cors issue with cmap server.
-      tileOptions: { crossOriginKeyword: 'anonymous' },
+      // tileOptions: { crossOriginKeyword: "anonymous" },
     });
 
     const { lat, lon } = this.location as LatLon;
 
     const map = new Map({
-      target: this.$refs['map-container'],
-      layers: [
-        this.tileLayer,
-      ],
+      target: this.$refs["map-container"],
+      layers: [this.tileLayer],
       view: new View({
         center: fromLonLat([lon, lat]),
         zoom: this.initialZoom,
@@ -313,39 +306,39 @@ export default Vue.extend({
     this.mapProvider.map = map;
 
     // Set up listeners
-    map.on('pointermove', this.updateMouseCoords);
-    map.on('moveend', this.setExtentZoomAndDimensions);
+    map.on("pointermove", this.updateMouseCoords);
+    map.on("moveend", this.setExtentZoomAndDimensions);
 
     // Setup complete ready to rock and roll 🎸
     this.$nextTick(() => {
       setTimeout(() => {
-        this.$emit('ready', { map });
+        this.$emit("ready", { map });
       }, 200);
     });
   },
 
-  beforeDestroy() {
-    this.mapProvider.map.un('moveend', this.setExtentZoomAndDimensions);
-    this.mapProvider.map.un('pointermove', this.updateMouseCoords);
+  beforeUnmount(): void {
+    this.mapProvider.map.un("moveend", this.setExtentZoomAndDimensions);
+    this.mapProvider.map.un("pointermove", this.updateMouseCoords);
     this.mapProvider.map.setTarget(null);
   },
 
   methods: {
-    zoomIn() {
+    zoomIn(): void {
       this.changeZoom(1);
     },
 
-    zoomOut() {
+    zoomOut(): void {
       this.changeZoom(-1);
     },
 
-    changeZoom(value) {
+    changeZoom(value: number): void {
       const view = this.mapProvider.map.getView();
       const newZoom = view.getZoom() + value;
       view.setZoom(newZoom);
     },
 
-    resetZoom() {
+    resetZoom(): void {
       const view = this.mapProvider.map.getView();
       view.setZoom(this.initialZoom);
     },
@@ -353,7 +346,7 @@ export default Vue.extend({
     /**
      * Fires on map 'move end' event, that includes dragging and zooming
      */
-    setExtentZoomAndDimensions() {
+    setExtentZoomAndDimensions(): void {
       const { map } = this.mapProvider as MapProvider;
       const view = map.getView();
 
@@ -364,7 +357,7 @@ export default Vue.extend({
       const bottomRightCoords = getBottomRight(this.extent);
 
       const bottomRightPixelCoords = map.getPixelFromCoordinate(
-        bottomRightCoords as [number, number],
+        bottomRightCoords as [number, number]
       );
 
       if (bottomRightPixelCoords) {
@@ -380,18 +373,18 @@ export default Vue.extend({
        */
       const newPosition = view.getCenter();
       const [lon, lat] = toLonLat(newPosition);
-      this.$emit('update:location', { lat, lon });
+      this.$emit("update:location", { lat, lon });
 
       /**
        * Map Zoom
        */
       const newZoom = view.getZoom();
       this.currentZoomLevel = newZoom;
-      this.$emit('update:initialZoom', newZoom);
+      this.$emit("update:initialZoom", newZoom);
     },
 
-    updateMouseCoords(ev) {
-      const [lon, lat] = toLonLat(ev.coordinate);
+    updateMouseCoords({ coordinate }: { coordinate: number[] }): void {
+      const [lon, lat] = toLonLat(coordinate);
       this.mouseCoords = {
         lat,
         lon,
@@ -406,27 +399,33 @@ export default Vue.extend({
       }
     },
 
-    async initialiseCache() {
-      const cacheAvailable = 'caches' in window;
+    async initialiseCache(): Promise<void> {
+      const cacheAvailable = "caches" in window;
       if (cacheAvailable) {
         const cacheVersion = 1;
         this.cacheName = `map-terrain-${cacheVersion}`;
         this.cache = await caches.open(this.cacheName);
-        console.log('dvdb - initialiseCache - this.cache', this.cache);
+        console.log("dvdb - initialiseCache - this.cache", this.cache);
       }
       const estimate = await navigator.storage.estimate();
-      console.log('dvdb - estimated total space MB', estimate.quota ? estimate.quota / 1000000 : "can't say");
-      console.log('dvdb - estimate - estimate.usage MB', estimate.usage ? estimate.usage / 1000000 : "can't say");
+      console.log(
+        "dvdb - estimated total space MB",
+        estimate.quota ? estimate.quota / 1000000 : "can't say"
+      );
+      console.log(
+        "dvdb - estimate - estimate.usage MB",
+        estimate.usage ? estimate.usage / 1000000 : "can't say"
+      );
     },
 
-    async onTileLoad(tile, url) {
+    async onTileLoad(tile: any, url: string): Promise<void> {
       if (this.cache) {
         // The Cache API is supported
         try {
           const cacheResponse = await this.cache.match(url);
 
           if (cacheResponse) {
-            console.log('used local cache');
+            console.log("used local cache");
             const blob = await cacheResponse.blob();
             // eslint-disable-next-line no-param-reassign
             tile.getImage().src = window.URL.createObjectURL(blob);
@@ -437,9 +436,9 @@ export default Vue.extend({
               const newBlob = await newResponse.blob();
               // eslint-disable-next-line no-param-reassign
               tile.getImage().src = window.URL.createObjectURL(newBlob);
-              console.log('fetched and cached');
+              console.log("fetched and cached");
             } else {
-              console.log('something went wrong but fetching image instead');
+              console.log("something went wrong but fetching image instead");
               // eslint-disable-next-line no-param-reassign
               tile.getImage().src = url;
             }
@@ -448,13 +447,13 @@ export default Vue.extend({
           console.error({ error });
         }
       } else {
-        console.log('fetched online no cache available');
+        console.log("fetched online no cache available");
         // eslint-disable-next-line no-param-reassign
         tile.getImage().src = url;
       }
     },
   },
-});
+};
 </script>
 
 <style scoped lang="scss">
