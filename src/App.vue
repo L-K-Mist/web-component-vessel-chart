@@ -13,8 +13,9 @@
           <button
             type="button"
             class="relative inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            @click="logCache"
           >
-            Create new job
+            Log Cache
           </button>
         </div>
       </div>
@@ -51,12 +52,15 @@
 </template>
 
 <script>
+/* TODO when file is mature delete this comment and tidy what's left*/
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { defineComponent, ref, onMounted, inject } from "vue";
 
 import { OlMap } from "vue3-openlayers";
 import "vue3-openlayers/dist/vue3-openlayers.css";
 // import SMap from "@/BorrowedFromBaseplate/SMap.vue";
 // import HelloWorld from "./components/HelloWorld.vue";
+import { useStorage } from "@vueuse/core";
 
 export default defineComponent({
   name: "App",
@@ -97,6 +101,7 @@ export default defineComponent({
       if (cacheAvailable) {
         console.log("dvdb - initialiseCache - cache.value", cache.value);
       }
+
       const estimate = await navigator.storage.estimate();
       console.log(
         "dvdb - estimated total space MB",
@@ -119,25 +124,66 @@ export default defineComponent({
     function sleep(ms) {
       new Promise((resolve) => setTimeout(resolve, ms));
     }
+
+    async function logCache() {
+      const response = await cache.value.matchAll("map-tile-index/");
+      console.log("dvdb - logCache - response", response);
+      findImages();
+    }
+
+    async function findImages() {
+      // Get a list of all of the caches for this origin
+      const cacheNames = await cache.value.keys();
+      console.log("dvdb - findImages - cacheNames", cacheNames);
+      const result = [];
+
+      for (const name of cacheNames) {
+        // Open the cache
+        const cache = await caches.open(name);
+
+        // Get a list of entries. Each item is a Request object
+        for (const request of await cache.keys()) {
+          // If the request URL matches, add the response to the result
+          if (request.url.endsWith(".png")) {
+            result.push(await cache.match(request));
+          }
+        }
+      }
+
+      return result;
+    }
+
     async function onTileLoad(tile, url) {
+      const todaysIndex = useStorage(`map-tile-index/${url}`);
       if (cache.value) {
         // The Cache API is supported
         try {
           const cacheResponse = await cache.value.match(url);
 
           if (cacheResponse) {
+            todaysIndex.value = {
+              ...todaysIndex.value,
+              lastUsed: +new Date(),
+            };
             console.log("used local cache");
             const blob = await cacheResponse.blob();
             // eslint-disable-next-line no-param-reassign
             tile.getImage().src = window.URL.createObjectURL(blob);
           } else {
-            await cache.value.add(url);
-            const newResponse = await cache.value.match(url);
+            const request = new Request(url);
+            request.received = +new Date();
+            await cache.value.add(request);
+            const newResponse = await cache.value.match(url); // Thoroughly confirms that we have that url in the cache
             if (newResponse) {
               const newBlob = await newResponse.blob();
               // eslint-disable-next-line no-param-reassign
               tile.getImage().src = window.URL.createObjectURL(newBlob);
               console.log("fetched and cached");
+
+              todaysIndex.value = {
+                ...todaysIndex.value,
+                downloaded: +new Date(),
+              };
             } else {
               console.log("something went wrong but fetching image instead");
               // eslint-disable-next-line no-param-reassign
@@ -163,6 +209,7 @@ export default defineComponent({
       weatherSource,
       mapHeight,
       tileLoadFunctionWeather,
+      logCache,
     };
   },
 });
