@@ -13,6 +13,7 @@
           <button
             type="button"
             class="relative inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            @click="deleteCache"
           >
             Create new job
           </button>
@@ -58,13 +59,15 @@ import "vue3-openlayers/dist/vue3-openlayers.css";
 // import SMap from "@/BorrowedFromBaseplate/SMap.vue";
 // import HelloWorld from "./components/HelloWorld.vue";
 
+import { getAll, putTile, destroy } from "@/api/api-pouch";
+
 export default defineComponent({
   name: "App",
   components: {
     OlMap,
   },
   setup() {
-    inject();
+    // inject();
     const center = ref([40, 40]);
     const projection = ref("EPSG:4326");
     const zoom = ref(8);
@@ -87,6 +90,7 @@ export default defineComponent({
     // CACHING
     onMounted(() => {
       initialiseCache();
+      getAll();
     });
     const cacheVersion = 1;
     const cacheName = `map-terrain-${cacheVersion}`;
@@ -116,9 +120,15 @@ export default defineComponent({
       onTileLoad(tile, url);
       tile.getImage().src = url;
     }
-    function sleep(ms) {
-      new Promise((resolve) => setTimeout(resolve, ms));
+    // function sleep(ms) {
+    //   new Promise((resolve) => setTimeout(resolve, ms));
+    // }
+    async function deleteCache() {
+      const deleteSuccess = await caches.delete(cacheName);
+      destroy();
+      console.log("dvdb - deleteCache - deleteSuccess", deleteSuccess);
     }
+
     async function onTileLoad(tile, url) {
       if (cache.value) {
         // The Cache API is supported
@@ -130,8 +140,16 @@ export default defineComponent({
             const blob = await cacheResponse.blob();
             // eslint-disable-next-line no-param-reassign
             tile.getImage().src = window.URL.createObjectURL(blob);
+            putTile({
+              id: url,
+              lastUsed: +new Date(),
+            });
           } else {
             await cache.value.add(url);
+            putTile({
+              id: url,
+              firstFetched: +new Date(),
+            });
             const newResponse = await cache.value.match(url);
             if (newResponse) {
               const newBlob = await newResponse.blob();
@@ -163,6 +181,7 @@ export default defineComponent({
       weatherSource,
       mapHeight,
       tileLoadFunctionWeather,
+      deleteCache,
     };
   },
 });
