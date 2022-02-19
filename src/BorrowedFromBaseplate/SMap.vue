@@ -55,7 +55,7 @@
 </template>
 
 <script lang="ts">
-import throttle from "lodash/throttle";
+// import throttle from "lodash/throttle";
 import "ol/ol.css";
 import { Map, View } from "ol";
 import TileLayer from "ol/layer/Tile";
@@ -396,60 +396,6 @@ export default {
 
       if (el.style.cursor !== type) {
         el.style.cursor = type;
-      }
-    },
-
-    async initialiseCache(): Promise<void> {
-      const cacheAvailable = "caches" in window;
-      if (cacheAvailable) {
-        const cacheVersion = 1;
-        this.cacheName = `map-terrain-${cacheVersion}`;
-        this.cache = await caches.open(this.cacheName);
-        console.log("dvdb - initialiseCache - this.cache", this.cache);
-      }
-      const estimate = await navigator.storage.estimate();
-      console.log(
-        "dvdb - estimated total space MB",
-        estimate.quota ? estimate.quota / 1000000 : "can't say"
-      );
-      console.log(
-        "dvdb - estimate - estimate.usage MB",
-        estimate.usage ? estimate.usage / 1000000 : "can't say"
-      );
-    },
-
-    async onTileLoad(tile: any, url: string): Promise<void> {
-      if (this.cache) {
-        // The Cache API is supported
-        try {
-          const cacheResponse = await this.cache.match(url);
-
-          if (cacheResponse) {
-            console.log("used local cache");
-            const blob = await cacheResponse.blob();
-            // eslint-disable-next-line no-param-reassign
-            tile.getImage().src = window.URL.createObjectURL(blob);
-          } else {
-            await this.cache.add(url);
-            const newResponse = await this.cache.match(url);
-            if (newResponse) {
-              const newBlob = await newResponse.blob();
-              // eslint-disable-next-line no-param-reassign
-              tile.getImage().src = window.URL.createObjectURL(newBlob);
-              console.log("fetched and cached");
-            } else {
-              console.log("something went wrong but fetching image instead");
-              // eslint-disable-next-line no-param-reassign
-              tile.getImage().src = url;
-            }
-          }
-        } catch (error) {
-          console.error({ error });
-        }
-      } else {
-        console.log("fetched online no cache available");
-        // eslint-disable-next-line no-param-reassign
-        tile.getImage().src = url;
       }
     },
   },

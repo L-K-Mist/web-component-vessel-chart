@@ -10,12 +10,13 @@
   },
   "dependencies": {
     "@tailwindcss/postcss7-compat": "^2.2.17",
+    "@vueuse/core": "^7.6.2",
     "autoprefixer": "^9",
     "core-js": "^3.6.5",
-    "ol": "^6.12.0",
     "postcss": "^7",
     "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.17",
-    "vue": "^3.0.0"
+    "vue": "^3.0.0",
+    "vue3-openlayers": "^0.1.61"
   },
   "devDependencies": {
     "@types/jest": "^24.0.19",
