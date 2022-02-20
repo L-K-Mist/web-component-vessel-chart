@@ -79,6 +79,7 @@ export async function getAll(): Promise<void> {
 // Progress-Loader.
 // Space-Available - later --> Click here to get Podium-Plugged-In, the desktop solution
 // For faster data.
+let count: number | null = null;
 export function putTile(
   tileDoc: Record<string, unknown>,
   extraInfo: Record<string, unknown>
@@ -87,7 +88,6 @@ export function putTile(
     ...tileDoc,
     ...extraInfo,
   };
-  let count: number | null = null;
   tileIndex.upsert(newDoc.id, function (doc: any) {
     if (!doc.count) {
       count = 1;

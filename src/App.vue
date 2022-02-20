@@ -52,9 +52,7 @@
 </template>
 
 <script>
-/* TODO when file is mature delete this comment and tidy what's left*/
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import { defineComponent, ref, onMounted, inject } from "vue";
+import { defineComponent, ref, onMounted } from "vue";
 
 import { OlMap } from "vue3-openlayers";
 import "vue3-openlayers/dist/vue3-openlayers.css";
@@ -66,6 +64,7 @@ import { useStorage } from "@vueuse/core";
 // Not too much, that's what the cache is for,
 // but some. Start with numbers like 30ms to 100ms.
 import { getAll, putTile, destroy } from "@/api/api-pouch";
+import { useThrottle } from "@vueuse/core";
 
 export default defineComponent({
   name: "App",
@@ -73,7 +72,6 @@ export default defineComponent({
     OlMap,
   },
   setup() {
-    // inject();
     const center = ref([40, 40]);
     const projection = ref("EPSG:4326");
     const zoom = ref(8);
@@ -87,10 +85,6 @@ export default defineComponent({
       source.value.source.tileLoadFunction = tileLoadFunctionTerrain;
       // weatherSource.value.source.tileLoadFunction = tileLoadFunctionWeather;
       console.log("dvdb - onMounted - source", source.value);
-      console.log(
-        "dvdb - onMounted - weatherSource.value",
-        weatherSource.value
-      );
     });
 
     // CACHING
@@ -119,13 +113,28 @@ export default defineComponent({
       );
     }
 
-    function tileLoadFunctionTerrain(tile, src) {
-      tile.getImage().src = src;
+    function tileLoadFunctionTerrain(tile, url) {
+      onTileLoad(tile, url);
+      // tile.getImage().src = src;
     }
+    // Tile Loading Starts
+    // const input = ref("");
+
+    // function debouncedTileLoadFunctionTerrain(tile, src) {
+    //   return useThrottle(
+    //     ref(() => {
+    //       console.log("dvdb - returnuseThrottle - useThrottle");
+    //       tileLoadFunctionTerrain(tile, src);
+    //     }),
+    //     5000
+    //   );
+    // }
+    // const updated = ref(0);
+    // watch(debounced, () => (updated.value += 1));
 
     function tileLoadFunctionWeather(tile, url) {
       onTileLoad(tile, url);
-      tile.getImage().src = url;
+      // tile.getImage().src = url;
     }
     // function sleep(ms) {
     //   new Promise((resolve) => setTimeout(resolve, ms));
@@ -164,44 +173,37 @@ export default defineComponent({
       return result;
     }
 
+    async function displayTileFromCache(tile, response) {
+      const newBlob = await response.blob();
+      // eslint-disable-next-line no-param-reassign
+      tile.getImage().src = window.URL.createObjectURL(newBlob);
+    }
+
     async function onTileLoad(tile, url) {
-      const todaysIndex = useStorage(`map-tile-index/${url}`);
       if (cache.value) {
         // The Cache API is supported
         try {
           const cacheResponse = await cache.value.match(url);
 
           if (cacheResponse) {
-            todaysIndex.value = {
-              ...todaysIndex.value,
-              lastUsed: +new Date(),
-            };
             console.log("used local cache");
-            const blob = await cacheResponse.blob();
-            // eslint-disable-next-line no-param-reassign
-            tile.getImage().src = window.URL.createObjectURL(blob);
+            displayTileFromCache(tile, cacheResponse);
             putTile({
               id: url,
               lastUsed: +new Date(),
             });
           } else {
+            console.log("fetching, caching and loading");
             await cache.value.add(url);
-            putTile({
-              id: url,
-              firstFetched: +new Date(),
-              lastUsed: +new Date(),
-            });
             const newResponse = await cache.value.match(url);
             if (newResponse) {
-              const newBlob = await newResponse.blob();
-              // eslint-disable-next-line no-param-reassign
-              tile.getImage().src = window.URL.createObjectURL(newBlob);
-              console.log("fetched and cached");
-
-              todaysIndex.value = {
-                ...todaysIndex.value,
-                downloaded: +new Date(),
-              };
+              displayTileFromCache(tile, newResponse);
+              // TODO Pull this out to pouch focussed section. Just emit here
+              putTile({
+                id: url,
+                firstFetched: +new Date(),
+                lastUsed: +new Date(),
+              });
             } else {
               console.log("something went wrong but fetching image instead");
               // eslint-disable-next-line no-param-reassign
