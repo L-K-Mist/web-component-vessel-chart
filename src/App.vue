@@ -16,12 +16,7 @@
             class="relative inline-flex items-center px-4 mb-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             @click="deleteCache"
           >
-            Delete Cache and Delete Index-of-Chache ======= class="relative
-            inline-flex items-center px-4 py-2 border border-transparent
-            shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600
-            hover:bg-indigo-700 focus:outline-none focus:ring-2
-            focus:ring-offset-2 focus:ring-indigo-500" @click="logCache" > Log
-            Cache >>>>>>> experiment-ends-with-Pouch
+            Delete Cache and Index of Cache
           </button>
         </div>
       </div>
@@ -45,13 +40,12 @@
             url="https://cs.stratumfive.com/tile/256/{z}/{y}/{x}/png?layers=cmap"
           />
         </ol-tile-layer>
-        <ol-tile-layer :opacity="0.3">
+        <!-- <ol-tile-layer :opacity="0.3">
           <ol-source-xyz
             ref="weatherSource"
             url="https://cs.stratumfive.com/tile/256/{z}/{y}/{x}/png?layers=bg:000;land:021;density:_all:2021-01"
-            :tileLoadFunction="tileLoadFunctionWeather"
           />
-        </ol-tile-layer>
+        </ol-tile-layer> -->
       </ol-map>
     </div>
   </div>
@@ -91,7 +85,7 @@ export default defineComponent({
 
     onMounted(() => {
       source.value.source.tileLoadFunction = tileLoadFunctionTerrain;
-      weatherSource.value.source.tileLoadFunction = tileLoadFunctionWeather;
+      // weatherSource.value.source.tileLoadFunction = tileLoadFunctionWeather;
       console.log("dvdb - onMounted - source", source.value);
       console.log(
         "dvdb - onMounted - weatherSource.value",
