@@ -24,28 +24,41 @@ export async function getAll(): Promise<void> {
       // destructured doc key deleted
       // ie this is the doc now, it doesn't need a doc key.
       delete item.doc;
+      item.firstFetched = new Date(item.firstFetched).toUTCString();
+      item.lastUsed = new Date(item.lastUsed).toUTCString();
       return item;
     });
-  const sortedByOldest = data.sort((a: any, b: any): number => {
-    if (!a || !b) {
-      return 0;
-    }
+  const sortedYoungestFirst = data.sort((a: any, b: any): number => {
     return b.firstFetched - a.firstFetched;
   });
 
+  const sortedPopularFirst = data.sort((a: any, b: any): number => {
+    return b.count - a.count;
+  });
+  console.log(
+    "dvdb - sortedPopularFirst - sortedPopularFirst",
+    sortedPopularFirst
+  );
+
   console.log("dvdb - data - data", data);
-  console.log("dvdb - getAll - sortedByOldest", sortedByOldest);
-  const oldest = sortedByOldest[0].firstFetched;
-  const youngest = sortedByOldest[sortedByOldest.length - 1].firstFetched;
+  console.log("dvdb - getAll - sortedYoungestFirst", sortedYoungestFirst);
+  const oldest = sortedYoungestFirst.length
+    ? new Date(sortedYoungestFirst[0].firstFetched)?.getTime()
+    : 0;
+  const youngest = sortedYoungestFirst.length
+    ? new Date(
+        sortedYoungestFirst[sortedYoungestFirst.length - 1].firstFetched
+      )?.getTime()
+    : 0;
   const firstMinusLast = oldest - youngest;
   console.log("dvdb - getAll - youngest", youngest);
   console.log("dvdb - getAll - oldest", oldest);
   console.log("dvdb - getAll - firstMinusLast", firstMinusLast); // Returns negative number -230980
   if (isNaN(firstMinusLast)) {
     console.log("dvdb - getAll - Damn I'm NaN");
-    debugger;
+    // debugger;
   }
-  const deleteFrontHalfOfArray = sortedByOldest.filter(
+  const deleteFrontHalfOfArray = sortedYoungestFirst.filter(
     (_: unknown, index: number, array: number[]) => index > array.length / 2
   );
   console.log("dvdb - getAll - deleteFrontHalfOfArray", deleteFrontHalfOfArray);
@@ -79,7 +92,7 @@ export async function getAll(): Promise<void> {
 // Progress-Loader.
 // Space-Available - later --> Click here to get Podium-Plugged-In, the desktop solution
 // For faster data.
-let count: number | null = null;
+
 export function putTile(
   tileDoc: Record<string, unknown>,
   extraInfo: Record<string, unknown>
@@ -90,12 +103,11 @@ export function putTile(
   };
   tileIndex.upsert(newDoc.id, function (doc: any) {
     if (!doc.count) {
-      count = 1;
+      doc.count = 1;
     }
-    count !== null && count++;
+    doc.count += 1;
     return {
-      doc,
-      count,
+      ...doc,
       ...newDoc,
     };
   });

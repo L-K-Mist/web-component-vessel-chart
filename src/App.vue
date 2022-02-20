@@ -196,19 +196,20 @@ export default defineComponent({
             console.log("fetching, caching and loading");
             await cache.value.add(url);
             const newResponse = await cache.value.match(url);
-            if (newResponse) {
-              displayTileFromCache(tile, newResponse);
-              // TODO Pull this out to pouch focussed section. Just emit here
-              putTile({
-                id: url,
-                firstFetched: +new Date(),
-                lastUsed: +new Date(),
-              });
-            } else {
-              console.log("something went wrong but fetching image instead");
-              // eslint-disable-next-line no-param-reassign
+            if (!newResponse) {
               tile.getImage().src = url;
+              throw new Error(
+                "something went wrong but fetching image online instead"
+              );
             }
+
+            displayTileFromCache(tile, newResponse);
+            // TODO Pull this out to pouch focussed section. Just emit here
+            putTile({
+              id: url,
+              firstFetched: +new Date(),
+              lastUsed: +new Date(),
+            });
           }
         } catch (error) {
           console.error({ error });
