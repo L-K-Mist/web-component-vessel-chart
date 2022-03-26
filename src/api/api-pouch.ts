@@ -90,7 +90,6 @@ export async function getAll(): Promise<void> {
 
 // Alert: "Maybe grab a cuppa, this might take a few minutes."
 // Progress-Loader.
-// Space-Available - later --> Click here to get Podium-Plugged-In, the desktop solution
 // For faster data.
 
 export function putTile(
