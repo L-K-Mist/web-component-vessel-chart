@@ -1,4 +1,4 @@
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, onMounted } from "vue";
 import { getAll, putTile, destroy } from "@/api/api-pouch";
 
 export function useTileCache(olMap) {
